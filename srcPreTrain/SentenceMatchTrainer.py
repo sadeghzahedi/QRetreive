@@ -94,7 +94,7 @@ def evaluate(dataStream, valid_graph, sess, outpath=None,
             predicted = 1
         if labels [i] == predicted:
             correct_tags += 1
-    ans =  correct_tags / len (scores)
+    ans =  correct_tags / len (scores1)
     return ans, ans # not error to (map, mrr)
 
 
