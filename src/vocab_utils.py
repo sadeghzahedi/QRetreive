@@ -579,7 +579,7 @@ def collectVoc(trainpath):
             line = line.decode('utf-8').strip()
         else:
             line = line.strip()
-        item = re.split("\t", line)
+        item = re.split("\t", line.replace('#!#&', '\t'))
         sentence = item[0] + ' ' + item[1]
         sentence = sentence.lower()
         for word in re.split(' ', sentence):
@@ -619,7 +619,7 @@ def make_data_glove(vec_path , sentence_path_list, out_file_path):
 
 if __name__ == '__main__':
 
-    l = ['trecqa/', 'wikiqa/WikiQACorpus/WikiQA-']
+    l = ['trecqa/', 'wikiqa/']
     sentence_path_list = []
     for qa_path in l:
         sentence_path_list.append('../data/' +qa_path +'train.txt')
