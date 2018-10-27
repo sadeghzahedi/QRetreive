@@ -348,15 +348,15 @@ def sub (x, y):
     return in_mul
 
 
-def cal_wxb(in_val, scope, output_dim, input_dim, activation = 'relu'):
+def cal_wxb(in_val, scope, output_dim, input_dim, activation = 'relu', learn_params = True):
     #in_val : [bs, M, d]
     input_shape = tf.shape(in_val)
     batch_size = input_shape[0]
     passage_len = input_shape[1]
     in_val = tf.reshape(in_val, [batch_size*passage_len, input_dim])
     with tf.variable_scope(scope):
-        w = tf.get_variable('sim_w', [input_dim, output_dim], dtype=tf.float32)
-        b = tf.get_variable('sim_b', [output_dim], dtype = tf.float32)
+        w = tf.get_variable('sim_w', [input_dim, output_dim], dtype=tf.float32, trainable = learn_params)
+        b = tf.get_variable('sim_b', [output_dim], dtype = tf.float32, trainable = learn_params)
         if activation == 'relu':
             outputs = tf.nn.relu(tf.nn.xw_plus_b(in_val, w, b))
         elif activation == 'tanh':
@@ -394,11 +394,11 @@ def sim_w_sub(h_rep, passage_rep, mp_dim, scope, input_dim,activation):
     in_val = sub(h_rep, passage_rep)
     return cal_wxb(in_val, scope, mp_dim, input_dim,activation)
 
-def sim_w_sub_mul(h_rep, passage_rep, mp_dim, scope, input_dim,activation):
+def sim_w_sub_mul(h_rep, passage_rep, mp_dim, scope, input_dim,activation, learn_params):
     in_mul = tf.multiply(h_rep, passage_rep)
-    in_mul = cal_wxb(in_mul, scope, mp_dim, input_dim,activation)
+    in_mul = cal_wxb(in_mul, scope, mp_dim, input_dim,activation, learn_params)
     in_sub = sub(h_rep, passage_rep)
-    in_sub = cal_wxb(in_sub, scope + 'sub', mp_dim//2, input_dim,activation)
+    in_sub = cal_wxb(in_sub, scope + 'sub', mp_dim//2, input_dim,activation, learn_params)
     in_val = tf.concat([in_mul, in_sub], 2) #[bs, M, 2d]
     return in_val
     #return cal_wxb(in_val, scope, mp_dim, 2*input_dim,activation)
@@ -421,7 +421,7 @@ def sim_sub(h_rep, passage_rep, mp_dim, scope, input_dim, activation):
 
 
 
-def sim_layer (h_rep, passage_rep, mp_dim, scope, sim_type, input_dim,activation):
+def sim_layer (h_rep, passage_rep, mp_dim, scope, sim_type, input_dim,activation, learn_params):
     if sim_type == 'w_con':
         return sim_w_con(h_rep, passage_rep, mp_dim, scope, input_dim,activation)
     elif sim_type == 'w_mul':
@@ -429,7 +429,7 @@ def sim_layer (h_rep, passage_rep, mp_dim, scope, sim_type, input_dim,activation
     elif sim_type == 'w_sub':
         return sim_w_sub(h_rep, passage_rep, mp_dim, scope,input_dim,activation)
     elif sim_type == 'w_sub_mul':
-        return sim_w_sub_mul(h_rep, passage_rep, mp_dim, scope,input_dim,activation)
+        return sim_w_sub_mul(h_rep, passage_rep, mp_dim, scope,input_dim,activation, learn_params)
     elif sim_type == 'w_sub_self':
         return sim_w_sub_self(h_rep, passage_rep, mp_dim, scope, input_dim, activation)    # elif sim_type == 'w_cos':
     #     w_cos = tf.get_variable("w_cos_weight", [mp_dim, input_dim], dtype= tf.float32)
@@ -442,14 +442,14 @@ def sim_layer (h_rep, passage_rep, mp_dim, scope, sim_type, input_dim,activation
         print ("there is no true sim type")
         return None
 
-def multi_sim_layer (h_rep_list, passage_rep, mp_dim, sim_type_list, input_dim ,scope, activation):
+def multi_sim_layer (h_rep_list, passage_rep, mp_dim, sim_type_list, input_dim ,scope, activation, learn_params):
     #scope_name = 'sim_layer'
     outputs = []
     #if scope is not None: scope_name = scope
     for i in range (len(sim_type_list)):
         cur_scope_name = scope + "-{}".format(i)
         outputs.append(sim_layer(h_rep_list[i], passage_rep, mp_dim,
-                                 cur_scope_name, sim_type_list[i], input_dim,activation))
+                                 cur_scope_name, sim_type_list[i], input_dim,activation, learn_params))
 
     outputs = tf.concat(outputs,2) #[bs, M, num_sim*MP]
     return outputs
@@ -457,7 +457,7 @@ def multi_sim_layer (h_rep_list, passage_rep, mp_dim, sim_type_list, input_dim ,
 
 def match_bilinear_sim (passage_rep, question_rep, mp_dim, input_dim,
                         type1, type2, type3, is_shared_attetention, num_call, with_bilinear_att
-                        , with_match_highway,question_mask ,clip_attention):
+                        , with_match_highway,question_mask ,clip_attention, learn_params):
     # passage_rep  [bs, M, d]
     # question_rep [bs, N, d]
     # type means sim_func_type
@@ -468,7 +468,7 @@ def match_bilinear_sim (passage_rep, question_rep, mp_dim, input_dim,
     alph, h_rep_list = multi_bilinear_att(passage_rep, question_rep, len(sim_type_list),input_dim, is_shared_attetention, num_call, with_bilinear_att,
                                           question_mask=question_mask,clip_attention=clip_attention)
 
-    ans =  multi_sim_layer(h_rep_list, passage_rep, mp_dim, sim_type_list, input_dim, scope=str(num_call), activation='relu')
+    ans =  multi_sim_layer(h_rep_list, passage_rep, mp_dim, sim_type_list, input_dim, scope=str(num_call), activation='relu', learn_params=learn_params)
 
     attention_weights = alph
     return ans, attention_weights #[bs, M, d+10]
@@ -495,7 +495,7 @@ def self_attention(passage_context_representation_fw, pasage_context_representat
     return mm
 
 
-def highway_layer(in_val, input_size, scope=None, output_size=-1, with_highway = False):
+def highway_layer(in_val, input_size, scope=None, output_size=-1, with_highway = False, learn_params = True):
     if output_size == -1:
         output_size = input_size
     # in_val: [batch_size, passage_len, dim]
@@ -505,10 +505,10 @@ def highway_layer(in_val, input_size, scope=None, output_size=-1, with_highway =
 #     feat_dim = input_shape[2]
     in_val = tf.reshape(in_val, [batch_size * passage_len, input_size])
     with tf.variable_scope(scope or "highway_layer"):
-        highway_w = tf.get_variable("highway_w", [input_size, output_size], dtype=tf.float32)
-        highway_b = tf.get_variable("highway_b", [output_size], dtype=tf.float32)
-        full_w = tf.get_variable("full_w", [input_size, output_size], dtype=tf.float32)
-        full_b = tf.get_variable("full_b", [output_size], dtype=tf.float32)
+        highway_w = tf.get_variable("highway_w", [input_size, output_size], dtype=tf.float32, trainable = learn_params)
+        highway_b = tf.get_variable("highway_b", [output_size], dtype=tf.float32, trainable = learn_params)
+        full_w = tf.get_variable("full_w", [input_size, output_size], dtype=tf.float32, trainable = learn_params)
+        full_b = tf.get_variable("full_b", [output_size], dtype=tf.float32, trainable = learn_params)
         trans = tf.nn.tanh(tf.nn.xw_plus_b(in_val, full_w, full_b))
         gate = tf.nn.sigmoid(tf.nn.xw_plus_b(in_val, highway_w, highway_b))
         if with_highway == False:
@@ -532,7 +532,7 @@ def match_passage_with_question(passage_context_representation_fw, passage_conte
                                 with_full_match=True, with_maxpool_match=True, with_attentive_match=True, with_max_attentive_match=True,
                                 with_bilinear_att = 's', type1 = None, type2 = None, type3= None,
                                 is_shared_attetention = False, unstack_cnn = True, num_call = 1, with_match_highway = True
-                                ,clip_attention = True, with_input_highway = False):
+                                ,clip_attention = True, with_input_highway = False, learn_params = True):
 
     all_question_aware_representatins = []
     dim = 0
@@ -552,12 +552,12 @@ def match_passage_with_question(passage_context_representation_fw, passage_conte
                                                           passage_context_representation_bw], 2)
             outputs, attention_weights = match_bilinear_sim(passage_context_representation_fw_bw, question_context_representation_fw_bw,
                            MP_dim,context_lstm_dim*2,type1, type2, type3, is_shared_attetention, num_call, with_bilinear_att, with_match_highway
-                                     ,question_mask ,clip_attention)
+                                     ,question_mask ,clip_attention, learn_params)
         else:
             outputs, attention_weights = match_bilinear_sim(passage_context_representation_fw, question_context_representation_fw,
                                          MP_dim, context_lstm_dim, type1, type2, type3, is_shared_attetention,
                                          num_call, with_bilinear_att, with_match_highway
-                                         , question_mask,clip_attention)
+                                         , question_mask,clip_attention, learn_params)
         all_question_aware_representatins.append(outputs)
         if type1 is not None: dim += MP_dim + MP_dim//2
         if type2 is not None: dim += MP_dim
@@ -575,7 +575,7 @@ def bilateral_match_func2(in_question_repres, in_passage_repres,
                           with_bilinear_att = 's', type1 = None, type2 = None, type3 = None, with_aggregation_attention = True,
                           is_shared_attetention = True, is_aggregation_lstm = True, max_window_size = 3,
                           context_lstm_dropout = True, is_aggregation_siamese = False, unstack_cnn = True, with_input_highway=False, with_context_self_attention=False,
-                          mean_max = True, clip_attention = True, with_matching_layer = True):
+                          mean_max = True, clip_attention = True, with_matching_layer = True, learn_params = True):
 
     # ====word level matching======
     question_aware_representatins = []
@@ -662,7 +662,7 @@ def bilateral_match_func2(in_question_repres, in_passage_repres,
                                                                                        ,is_shared_attetention = False, unstack_cnn=unstack_cnn,
                                                                                        num_call = 2, with_match_highway=with_match_highway
                                                                                        , clip_attention=clip_attention,
-                                                                                       with_input_highway=with_input_highway)
+                                                                                       with_input_highway=with_input_highway, learn_params=learn_params)
                         passage_aware_representatins.extend(matching_vectors)
                         passage_aware_dim += matching_dim
 

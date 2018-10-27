@@ -668,7 +668,7 @@ def main(_):
                                                           with_input_embedding=FLAGS.with_input_embedding,
                                                           with_output_highway = FLAGS.with_output_highway,
                                                           with_matching_layer = FLAGS.with_matching_layer,
-                                                          pooling_type=FLAGS.pooling_type)
+                                                          pooling_type=FLAGS.pooling_type, learn_params = FLAGS.learn_params)
                     tf.summary.scalar("Training Loss", train_graph.get_loss()) # Add a scalar summary for the snapshot loss.
 
         #         with tf.name_scope("Valid"):
@@ -703,7 +703,7 @@ def main(_):
                                                           q_count=1, pos_avg = FLAGS.pos_avg, with_input_embedding=FLAGS.with_input_embedding
                                                           ,with_output_highway = FLAGS.with_output_highway,
                                                           with_matching_layer = FLAGS.with_matching_layer,
-                                                          pooling_type=FLAGS.pooling_type)
+                                                          pooling_type=FLAGS.pooling_type, learn_params=FLAGS.learn_params)
 
 
                 initializer = tf.global_variables_initializer()
@@ -831,6 +831,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--has_pretrain',default=True, help='is trec or wiki?')
     parser.add_argument('--pretrain_path',default='../modelswik/SentenceMatch.normalst_b1.best.model', help='is trec or wiki?')
+    parser.add_argument('--learn_params',default=False, help='set it False, when you wanna fix pretrain parameters')
 
 
     FLAGS, unparsed = parser.parse_known_args()

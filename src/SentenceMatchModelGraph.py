@@ -38,7 +38,7 @@ class SentenceMatchModelGraph(object):
                  clip_attention = True, mean_max = True, with_tanh = True , new_list_wise=True, max_answer_size = 15,
                  q_count=2, pos_avg = True, sampling = False, sampling_type = 'attentive', sample_percent = 0.8,
                  top_treshold = -1, margin = 0, with_input_embedding = False ,with_output_highway = True,
-                 with_matching_layer=True, pooling_type = 1):
+                 with_matching_layer=True, pooling_type = 1, learn_params = True):
 
         # ======word representation layer======
 
@@ -194,10 +194,10 @@ class SentenceMatchModelGraph(object):
                                 output_size = input_dim
                                 flag_highway = True
                             in_question_repres = match_utils.highway_layer(in_question_repres, input_size=input_dim, scope='s',
-                                                                           output_size=output_size,with_highway=flag_highway)
+                                                                           output_size=output_size,with_highway=flag_highway, learn_params=learn_params)
                             tf.get_variable_scope().reuse_variables()
                             in_passage_repres = match_utils.highway_layer(in_passage_repres, input_size=input_dim, scope='s',
-                                                                           output_size=output_size, with_highway=flag_highway)
+                                                                           output_size=output_size, with_highway=flag_highway, learn_params=learn_params)
                         # if context_layer_num == 2:
                         #     with tf.variable_scope("input_highway2"):
                         #         context_layer_num = 1
@@ -223,7 +223,7 @@ class SentenceMatchModelGraph(object):
                                                                                           ,is_shared_attention, is_aggregation_lstm,
                                                                                           max_window_size, context_lstm_dropout,
                                                                                           is_aggregation_siamese,unstack_cnn, with_input_highway,with_context_self_attention,
-                                                                                          mean_max, clip_attention, with_matching_layer)
+                                                                                          mean_max, clip_attention, with_matching_layer, learn_params=learn_params)
 
                # felan ta inja tab zadam
                 #match_representation_list.append(match_representation)
@@ -447,10 +447,17 @@ class SentenceMatchModelGraph(object):
         self.score = tf.concat(score_list, 0)
         self.prob = tf.concat(prob_list, 0)
 
+        trainvars = tf.trainable_variables()
+        if learn_params == False:
+            tvars = [var for var in trainvars if not ('aggregation_layer' in var.name)]
+        else:
+            tvars = trainvars
+
+
         if optimize_type == 'adadelta':
             clipper = 50 
             optimizer = tf.train.AdadeltaOptimizer(learning_rate=learning_rate)
-            tvars = tf.trainable_variables()
+            #tvars = tf.trainable_variables()
             l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in tvars if v.get_shape().ndims > 1])
             self.loss = self.loss + lambda_l2 * l2_loss
             grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss, tvars), clipper)
@@ -461,7 +468,7 @@ class SentenceMatchModelGraph(object):
             self._lr_rate = tf.maximum(min_lr, tf.train.exponential_decay(learning_rate, self.global_step, 30000, 0.98))
             self.train_op = tf.train.GradientDescentOptimizer(learning_rate=self._lr_rate).minimize(self.loss)
         elif optimize_type == 'ema':
-            tvars = tf.trainable_variables()
+            #tvars = tf.trainable_variables()
             train_op = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(self.loss)
             # Create an ExponentialMovingAverage object
             ema = tf.train.ExponentialMovingAverage(decay=0.9999)
@@ -474,7 +481,7 @@ class SentenceMatchModelGraph(object):
         elif optimize_type == 'adam':
             clipper = 50
             optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
-            tvars = tf.trainable_variables()
+            #tvars = tf.trainable_variables()
             l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in tvars if v.get_shape().ndims > 1])
             self.loss = self.loss + lambda_l2 * l2_loss
             grads, _ = tf.clip_by_global_norm(tf.gradients(self.loss, tvars), clipper)
