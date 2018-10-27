@@ -1,4 +1,13 @@
 # QRetreive
+
+parameters for fixing pretrain:
+
+--learn_params in src directory.
+set it to False if you want to fix pretrain parameters. in this case all parameters considered fixed expect finall highway layer.
+
+
+
+
 Clone this repository into your desired directory with command: git clone https://github.com/sadeghzahedi/QRetreive
 
 
@@ -54,7 +63,7 @@ git push
 after my changes to repositry you can easily have them with command: git pull
 
 
-Sadegh, this week i have to prepare myself for interview :) dont scare to change the code, it will work :)
+
 
 
 
