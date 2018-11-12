@@ -1,5 +1,29 @@
 # QRetreive
 
+
+show sorted results:
+
+run: python show_res.py --run_id 'run_id0'
+
+result: a csv file is created in the current repository which contains all results of run_id.
+
+results are sorted based on valid_map. to sort based on test_map or max_test_map modify line 284 in show_res.py 
+
+
+Ensemble learning:
+
+Run this after running show_res.py because this file, uses the csv file created by show_res to determine the top results and ensemble them.
+
+parameters:
+
+--top_k : ensembel top k result (k is integer)
+
+run: python ensemble.py --run_id 'run_id0'
+
+result file: 'run_id-0E' in result directory
+
+
+
 parameters for fixing pretrain:
 
 --learn_params in src directory.
