@@ -52,6 +52,10 @@ class SentenceMatchModelGraph(object):
         self.in_question_words = get_place_holder (q_count, tf.int32, [None, None])#q_count*[tf.placeholder(tf.int32, [None, None])] # [batch_size, question_len]
         self.in_passage_words = get_place_holder (q_count, tf.int32, [None, None])#q_count*[tf.placeholder(tf.int32, [None, None])] # [batch_size, passage_len]
 #             self.word_embedding = tf.get_variable("word_embedding", shape=[word_vocab.size()+1, word_vocab.word_dim], initializer=tf.constant(word_vocab.word_vecs), dtype=tf.float32)
+        self.question_char_lengths = get_place_holder(q_count, tf.int32, [None,None]) # [batch_size, question_len]
+        self.passage_char_lengths = get_place_holder(q_count, tf.int32, [None,None]) # [batch_size, passage_len]
+        self.in_question_chars = get_place_holder(q_count, tf.int32, [None, None, None]) # [batch_size, question_len, q_char_len]
+        self.in_passage_chars = get_place_holder(q_count, tf.int32, [None, None, None]) # [batch_size, passage_len, p_char_len]        
         word_vec_trainable = True
         cur_device = '/gpu:0'
         if fix_word_vec:
@@ -83,92 +87,52 @@ class SentenceMatchModelGraph(object):
                 passage_len = input_shape[1]
                 input_dim += word_vocab.word_dim
 
-    #         if with_POS and POS_vocab is not None:
-    #             self.in_question_POSs = tf.placeholder(tf.int32, [None, None]) # [batch_size, question_len]
-    #             self.in_passage_POSs = tf.placeholder(tf.int32, [None, None]) # [batch_size, passage_len]
-    # #             self.POS_embedding = tf.get_variable("POS_embedding", shape=[POS_vocab.size()+1, POS_vocab.word_dim], initializer=tf.constant(POS_vocab.word_vecs), dtype=tf.float32)
-    #             self.POS_embedding = tf.get_variable("POS_embedding", initializer=tf.constant(POS_vocab.word_vecs), dtype=tf.float32)
-    #
-    #             in_question_POS_repres = tf.nn.embedding_lookup(self.POS_embedding, self.in_question_POSs) # [batch_size, question_len, POS_dim]
-    #             in_passage_POS_repres = tf.nn.embedding_lookup(self.POS_embedding, self.in_passage_POSs) # [batch_size, passage_len, POS_dim]
-    #             in_question_repres.append(in_question_POS_repres)
-    #             in_passage_repres.append(in_passage_POS_repres)
-    #
-    #             input_shape = tf.shape(self.in_question_POSs)
-    #             batch_size = input_shape[0]
-    #             question_len = input_shape[1]
-    #             input_shape = tf.shape(self.in_passage_POSs)
-    #             passage_len = input_shape[1]
-    #             input_dim += POS_vocab.word_dim
-    #
-    #         if with_NER and NER_vocab is not None:
-    #             self.in_question_NERs = tf.placeholder(tf.int32, [None, None]) # [batch_size, question_len]
-    #             self.in_passage_NERs = tf.placeholder(tf.int32, [None, None]) # [batch_size, passage_len]
-    # #             self.NER_embedding = tf.get_variable("NER_embedding", shape=[NER_vocab.size()+1, NER_vocab.word_dim], initializer=tf.constant(NER_vocab.word_vecs), dtype=tf.float32)
-    #             self.NER_embedding = tf.get_variable("NER_embedding", initializer=tf.constant(NER_vocab.word_vecs), dtype=tf.float32)
-    #
-    #             in_question_NER_repres = tf.nn.embedding_lookup(self.NER_embedding, self.in_question_NERs) # [batch_size, question_len, NER_dim]
-    #             in_passage_NER_repres = tf.nn.embedding_lookup(self.NER_embedding, self.in_passage_NERs) # [batch_size, passage_len, NER_dim]
-    #             in_question_repres.append(in_question_NER_repres)
-    #             in_passage_repres.append(in_passage_NER_repres)
-    #
-    #             input_shape = tf.shape(self.in_question_NERs)
-    #             batch_size = input_shape[0]
-    #             question_len = input_shape[1]
-    #             input_shape = tf.shape(self.in_passage_NERs)
-    #             passage_len = input_shape[1]
-    #             input_dim += NER_vocab.word_dim
-    #
-    #         if with_char and char_vocab is not None:
-    #             self.question_char_lengths = tf.placeholder(tf.int32, [None,None]) # [batch_size, question_len]
-    #             self.passage_char_lengths = tf.placeholder(tf.int32, [None,None]) # [batch_size, passage_len]
-    #             self.in_question_chars = tf.placeholder(tf.int32, [None, None, None]) # [batch_size, question_len, q_char_len]
-    #             self.in_passage_chars = tf.placeholder(tf.int32, [None, None, None]) # [batch_size, passage_len, p_char_len]
-    #             input_shape = tf.shape(self.in_question_chars)
-    #             batch_size = input_shape[0]
-    #             question_len = input_shape[1]
-    #             q_char_len = input_shape[2]
-    #             input_shape = tf.shape(self.in_passage_chars)
-    #             passage_len = input_shape[1]
-    #             p_char_len = input_shape[2]
-    #             char_dim = char_vocab.word_dim
-    # #             self.char_embedding = tf.get_variable("char_embedding", shape=[char_vocab.size()+1, char_vocab.word_dim], initializer=tf.constant(char_vocab.word_vecs), dtype=tf.float32)
-    #             self.char_embedding = tf.get_variable("char_embedding", initializer=tf.constant(char_vocab.word_vecs), dtype=tf.float32)
-    #
-    #             in_question_char_repres = tf.nn.embedding_lookup(self.char_embedding, self.in_question_chars) # [batch_size, question_len, q_char_len, char_dim]
-    #             in_question_char_repres = tf.reshape(in_question_char_repres, shape=[-1, q_char_len, char_dim])
-    #             question_char_lengths = tf.reshape(self.question_char_lengths, [-1])
-    #             in_passage_char_repres = tf.nn.embedding_lookup(self.char_embedding, self.in_passage_chars) # [batch_size, passage_len, p_char_len, char_dim]
-    #             in_passage_char_repres = tf.reshape(in_passage_char_repres, shape=[-1, p_char_len, char_dim])
-    #             passage_char_lengths = tf.reshape(self.passage_char_lengths, [-1])
-    #             with tf.variable_scope('char_lstm'):
-    #                 # lstm cell
-    #                 #char_lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(char_lstm_dim)
-    #                 char_lstm_cell = tf.contrib.rnn.BasicLSTMCell(char_lstm_dim)
-    #                 # dropout
-    #                 #if is_training: char_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(char_lstm_cell, output_keep_prob=(1 - dropout_rate))
-    #                 #char_lstm_cell = tf.nn.rnn_cell.MultiRNNCell([char_lstm_cell])
-    #                 if is_training: char_lstm_cell = tf.contrib.rnn.DropoutWrapper(char_lstm_cell,
-    #                                                                                output_keep_prob=(1 - dropout_rate))
-    #                 char_lstm_cell = tf.contrib.rnn.MultiRNNCell([char_lstm_cell])
-    #
-    #                 # question_representation
-    #                 question_char_outputs = dynamic_rnn(char_lstm_cell, in_question_char_repres,
-    #                         sequence_length=question_char_lengths,dtype=tf.float32)[0] # [batch_size*question_len, q_char_len, char_lstm_dim]
-    #                 question_char_outputs = question_char_outputs[:,-1,:]
-    #                 question_char_outputs = tf.reshape(question_char_outputs, [batch_size, question_len, char_lstm_dim])
-    #
-    #                 tf.get_variable_scope().reuse_variables()
-    #                 # passage representation
-    #                 passage_char_outputs = dynamic_rnn(char_lstm_cell, in_passage_char_repres,
-    #                         sequence_length=passage_char_lengths,dtype=tf.float32)[0] # [batch_size*question_len, q_char_len, char_lstm_dim]
-    #                 passage_char_outputs = passage_char_outputs[:,-1,:]
-    #                 passage_char_outputs = tf.reshape(passage_char_outputs, [batch_size, passage_len, char_lstm_dim])
-    #
-    #             in_question_repres.append(question_char_outputs)
-    #             in_passage_repres.append(passage_char_outputs)
-    #
-    #             input_dim += char_lstm_dim
+                if with_char and char_vocab is not None:
+                    input_shape = tf.shape(self.in_question_chars[i])
+                    batch_size = input_shape[0]
+                    question_len = input_shape[1]
+                    q_char_len = input_shape[2]
+                    input_shape = tf.shape(self.in_passage_chars[i])
+                    passage_len = input_shape[1]
+                    p_char_len = input_shape[2]
+                    char_dim = char_vocab.word_dim
+        #             self.char_embedding = tf.get_variable("char_embedding", shape=[char_vocab.size()+1, char_vocab.word_dim], initializer=tf.constant(char_vocab.word_vecs), dtype=tf.float32)
+                    self.char_embedding = tf.get_variable("char_embedding", initializer=tf.constant(char_vocab.word_vecs), dtype=tf.float32)
+        
+                    in_question_char_repres = tf.nn.embedding_lookup(self.char_embedding, self.in_question_chars[i]) # [batch_size, question_len, q_char_len, char_dim]
+                    in_question_char_repres = tf.reshape(in_question_char_repres, shape=[-1, q_char_len, char_dim])
+                    question_char_lengths = tf.reshape(self.question_char_lengths[i], [-1])
+                    in_passage_char_repres = tf.nn.embedding_lookup(self.char_embedding, self.in_passage_chars[i]) # [batch_size, passage_len, p_char_len, char_dim]
+                    in_passage_char_repres = tf.reshape(in_passage_char_repres, shape=[-1, p_char_len, char_dim])
+                    passage_char_lengths = tf.reshape(self.passage_char_lengths[i], [-1])
+                    with tf.variable_scope('char_lstm'):
+                        # lstm cell
+                        #char_lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(char_lstm_dim)
+                        char_lstm_cell = tf.contrib.rnn.BasicLSTMCell(char_lstm_dim)
+                        # dropout
+                        #if is_training: char_lstm_cell = tf.nn.rnn_cell.DropoutWrapper(char_lstm_cell, output_keep_prob=(1 - dropout_rate))
+                        #char_lstm_cell = tf.nn.rnn_cell.MultiRNNCell([char_lstm_cell])
+                        if is_training: char_lstm_cell = tf.contrib.rnn.DropoutWrapper(char_lstm_cell,
+                                                                                       output_keep_prob=(1 - dropout_rate))
+                        char_lstm_cell = tf.contrib.rnn.MultiRNNCell([char_lstm_cell])
+        
+                        # question_representation
+                        question_char_outputs = dynamic_rnn(char_lstm_cell, in_question_char_repres,
+                                sequence_length=question_char_lengths,dtype=tf.float32)[0] # [batch_size*question_len, q_char_len, char_lstm_dim]
+                        question_char_outputs = question_char_outputs[:,-1,:]
+                        question_char_outputs = tf.reshape(question_char_outputs, [batch_size, question_len, char_lstm_dim])
+        
+                        tf.get_variable_scope().reuse_variables()
+                        # passage representation
+                        passage_char_outputs = dynamic_rnn(char_lstm_cell, in_passage_char_repres,
+                                sequence_length=passage_char_lengths,dtype=tf.float32)[0] # [batch_size*question_len, q_char_len, char_lstm_dim]
+                        passage_char_outputs = passage_char_outputs[:,-1,:]
+                        passage_char_outputs = tf.reshape(passage_char_outputs, [batch_size, passage_len, char_lstm_dim])
+        
+                    in_question_repres.append(question_char_outputs)
+                    in_passage_repres.append(passage_char_outputs)
+        
+                    input_dim += char_lstm_dim
                 in_question_repres = tf.concat(in_question_repres, 2) # [batch_size, question_len, dim]
                 in_passage_repres = tf.concat(in_passage_repres, 2) # [batch_size, passage_len, dim]
 

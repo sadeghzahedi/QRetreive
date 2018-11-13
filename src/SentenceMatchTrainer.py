@@ -88,6 +88,10 @@ def evaluate(dataStream, valid_graph, sess, outpath=None,
                     valid_graph.get_passage_lengths(): sent2_length_batch, 
                     valid_graph.get_in_question_words(): word_idx_1_batch, 
                     valid_graph.get_in_passage_words(): word_idx_2_batch,
+                    valid_graph.get_question_char_lengths (): sent1_char_length_batch,
+                    valid_graph.get_passage_char_lengths() : sent2_char_length_batch,
+                    valid_graph.get_in_question_chars() : char_matrix_idx_1_batch,
+                    valid_graph.get_in_passage_chars (): char_matrix_idx_2_batch
                 }
 
         scores.append(sess.run(valid_graph.get_score(), feed_dict=feed_dict))
@@ -533,7 +537,7 @@ def main(_):
     while (Get_Next_box_size(FLAGS.start_batch) == True):
         word_vec_path = FLAGS.word_vec_path
         word_vocab = Vocab(word_vec_path, fileformat='txt3')
-        char_path = path_prefix + ".char_vocab"
+        char_path = path_prefix_pre + ".char_vocab"
         label_path = path_prefix + ".label_vocab"
         POS_path = path_prefix + ".POS_vocab"
         NER_path = path_prefix + ".NER_vocab"
@@ -547,9 +551,10 @@ def main(_):
         label_vocab = Vocab(fileformat='voc', voc=all_labels, dim=2)
         label_vocab.dump_to_txt2(label_path)
 
-        print('Number of chars: {}'.format(len(all_chars)))
-        char_vocab = Vocab(fileformat='voc', voc=all_chars, dim=FLAGS.char_emb_dim)
-        char_vocab.dump_to_txt2(char_path)
+        #print('Number of chars: {}'.format(len(all_chars)))
+        #char_vocab = Vocab(fileformat='voc', voc=all_chars, dim=FLAGS.char_emb_dim)
+        #char_vocab.dump_to_txt2(char_path)
+        char_vocab = Vocab(char_path, fileformat='txt2')
 
 
 
@@ -737,6 +742,10 @@ def main(_):
                         _passage_lengths = []
                         _in_question_words = []
                         _in_passage_words = []
+                        _in_question_chars = []
+                        _in_passage_chars =[]
+                        _in_question_chars_length = []
+                        _in_passage_chars_length = []
                         for i in range (FLAGS.question_count_per_batch):
                             cur_batch, batch_index = trainDataStream.nextBatch()
                             (label_batch, sent1_batch, sent2_batch, label_id_batch, word_idx_1_batch, word_idx_2_batch,
@@ -749,6 +758,10 @@ def main(_):
                             _passage_lengths.append(sent2_length_batch)
                             _in_question_words.append(word_idx_1_batch)
                             _in_passage_words.append(word_idx_2_batch)
+                            _in_question_chars.append (char_matrix_idx_1_batch)
+                            _in_passage_chars.append (char_matrix_idx_2_batch)
+                            _in_question_chars_length.append(sent1_char_length_batch)
+                            _in_passage_chars_length.append (sent2_char_length_batch)
 
                         feed_dict = {
                                  train_graph.get_truth(): tuple(_truth),
@@ -756,6 +769,11 @@ def main(_):
                                  train_graph.get_passage_lengths(): tuple(_passage_lengths),
                                  train_graph.get_in_question_words(): tuple(_in_question_words),
                                  train_graph.get_in_passage_words(): tuple(_in_passage_words),
+                                 train_graph.get_in_passage_words(): tuple(_in_passage_words),
+                                 train_graph.get_question_char_lengths (): tuple(_in_question_chars_length),
+                                 train_graph.get_passage_char_lengths() : tuple(_in_passage_chars_length),
+                                 train_graph.get_in_question_chars() : tuple (_in_question_chars),
+                                 train_graph.get_in_passage_chars (): tuple (_in_passage_chars)
                                  }
 
                         _, loss_value, _score = sess.run([train_graph.get_train_op(), train_graph.get_loss()
@@ -928,7 +946,7 @@ if __name__ == '__main__':
     parser.add_argument('--suffix', type=str, default='normal', required=False, help='Suffix of the model name.')
     parser.add_argument('--with_match_highway', default=False, help='Utilize highway layers for matching layer.', action='store_true')
     parser.add_argument('--with_aggregation_highway', default=False, help='Utilize highway layers for aggregation layer.', action='store_true')
-    parser.add_argument('--wo_char', default=True, help='Without character-composed embeddings.', action='store_true')
+    parser.add_argument('--wo_char', default=False, help='Without character-composed embeddings.', action='store_true')
     parser.add_argument('--type1', default= 'w_sub_mul', help='similrty function 1', action='store_true')
     parser.add_argument('--type2', default= None , help='similrty function 2', action='store_true')
     parser.add_argument('--type3', default= None , help='similrty function 3', action='store_true')
