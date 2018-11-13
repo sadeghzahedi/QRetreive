@@ -107,7 +107,7 @@ def softmax(x):
 first_time = True
 answer_len = []
 #all_touples_for_sort = []
-in_files = [open('result/wiklast_run1-1.106S'), open('result/wikglove5-0.238S')]
+#in_files = [open('result/wiklast_run1-1.106S'), open('result/wikglove5-0.238S')]
 for f in in_files:
     whole_list = []
     flag = True
