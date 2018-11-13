@@ -1,6 +1,12 @@
 # QRetreive
 
 
+Character Embedding:
+just set --wo_char=False in both codes. parameters --char_embedding_dim and --char_lstm_dim are related to it.
+
+keep in mind that change the paramteres into your desired ones and set them equale in both codes.
+
+
 show sorted results:
 
 run: python show_res.py --run_id 'run_id0'
