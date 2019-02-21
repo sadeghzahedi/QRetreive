@@ -71,6 +71,7 @@ class SentenceMatchModelGraph(object):
         score_list = []
         prob_list = []
         pos_list = []
+        self.before_pooling_list = [None] * 10
 
         with tf.variable_scope ('salamzendegi'):
             for i in range (q_count):
@@ -205,7 +206,7 @@ class SentenceMatchModelGraph(object):
                         logits = tf.nn.dropout(logits, (1 - dropout_rate))
                     else:
                         logits = tf.multiply(logits, (1 - dropout_rate))  #[sentpairs, dim]
-
+                    self.before_pooling_list [j] = tf.identity (logits)
                     if pooling_type == 1: #max
                         logits = tf.reduce_max(logits, axis=0, keep_dims=True) #[1, dim]
                     elif pooling_type == 2: #mean
@@ -409,6 +410,7 @@ class SentenceMatchModelGraph(object):
         self.loss = tf.reduce_mean(self.loss, 0)
         self.score = tf.concat(score_list, 0)
         self.prob = tf.concat(prob_list, 0)
+        #self.before_pooling_list = tf.concat (self.before_pooling_list, 0)
 
         trainvars = tf.trainable_variables()
         if learn_params == False:

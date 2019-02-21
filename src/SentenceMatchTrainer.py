@@ -156,6 +156,9 @@ def MAP_MRR(logit, gold, flag_valid, sent1s, sent2s, atts, word_vocab):
         return (my_map, my_mrr, output_sentences)#, output_attention_weights)
 
 def Generate_random_initialization(cnf):
+    if FLAGS.is_random_init == False and cnf >= 2:
+        return False
+
     if FLAGS.is_random_init == True:
         # cnf = cnf % 4
         # FLAGS.cnf = cnf
@@ -715,7 +718,7 @@ def main(_):
                 vars_ = {}
                 #for var in tf.all_variables():
                 for var in tf.global_variables():
-                    if "word_embedding" in var.name or "salamzendegi/b_1" in var.name or "salamzendegi/w_1" in var.name: continue
+                    if "word_embedding" in var.name: continue
         #             if not var.name.startswith("Model"): continue
                     vars_[var.name.split(":")[0]] = var
                 saver = tf.train.Saver(vars_)
@@ -847,7 +850,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--is_trec',default=True, help='is trec or wiki?')
 
-    parser.add_argument('--has_pretrain',default=True, help='is trec or wiki?')
+    parser.add_argument('--has_pretrain',default=False, help='is trec or wiki?')
     parser.add_argument('--pretrain_path',default='../modelswik/SentenceMatch.normalst_b1.best.model', help='is trec or wiki?')
     parser.add_argument('--learn_params',default=False, help='set it False, when you wanna fix pretrain parameters')
 
@@ -866,13 +869,13 @@ if __name__ == '__main__':
     #parser.add_argument('--word_vec_path', type=str, default='../data/glove/glove.840B.300d.txt', help='Path the to pre-trained word vector model.')
     parser.add_argument('--is_server',default=False, type= bool, help='do we have cuda visible devices?')
     parser.add_argument('--is_random_init',default=False, help='loop: ranom initalizaion of parameters -> run ?')
-    parser.add_argument('--max_epochs', type=int, default=10, help='Maximum epochs for training.')
+    parser.add_argument('--max_epochs', type=int, default=2, help='Maximum epochs for training.')
     parser.add_argument('--attention_type', default='dot_product', help='[bilinear, linear, linear_p_bias, dot_product]')
 
 
     parser.add_argument('--use_model_neg_sample',default=False, type= bool, help='do we have cuda visible devices?')
     parser.add_argument('--neg_sample_count',default=100, type= int, help='do we have cuda visible devices?')
-    parser.add_argument('--store_best',default=False, type = bool, help='do we have cuda visible devices?')
+    parser.add_argument('--store_best',default=True, type = bool, help='do we have cuda visible devices?')
 
 
 
@@ -946,7 +949,7 @@ if __name__ == '__main__':
     parser.add_argument('--suffix', type=str, default='normal', required=False, help='Suffix of the model name.')
     parser.add_argument('--with_match_highway', default=False, help='Utilize highway layers for matching layer.', action='store_true')
     parser.add_argument('--with_aggregation_highway', default=False, help='Utilize highway layers for aggregation layer.', action='store_true')
-    parser.add_argument('--wo_char', default=False, help='Without character-composed embeddings.', action='store_true')
+    parser.add_argument('--wo_char', default=True, help='Without character-composed embeddings.', action='store_true')
     parser.add_argument('--type1', default= 'w_sub_mul', help='similrty function 1', action='store_true')
     parser.add_argument('--type2', default= None , help='similrty function 2', action='store_true')
     parser.add_argument('--type3', default= None , help='similrty function 3', action='store_true')
